@@ -3,6 +3,7 @@ const express = require("express");
 const ejs = require("ejs");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
+const encrypt = require("mongoose-encryption");
 
 
 const app = express();
@@ -20,10 +21,14 @@ mongoose.connect("mongodb://localhost:27017/userDB", {
 });
 
 
-const userSchema = {
+const userSchema = new mongoose.Schema({
     email: String,
     password: String
-};
+});
+
+const secret = "Thisisourlittlesecret."
+userSchema.plugin(encrypt, { secret: secret, encryptedFields: ['password']});
+
 
 const User = new mongoose.model("User", userSchema);
 
@@ -61,21 +66,23 @@ app.post("/register", (req, res) => {
     });
 })
 
-app.post("/login", (req,res) => {
+app.post("/login", (req, res) => {
     const username = req.body.username;
     const password = req.body.password;
 
-    User.findOne({email: username}, (err, foundUser) => {
-        if(err){
+    User.findOne({
+        email: username
+    }, (err, foundUser) => {
+        if (err) {
             console.log(err)
         } else {
             //find if there is a user with the email in the database
             if (foundUser) {
                 //find if the user in the database has the identical password 
-                if(foundUser.password === password){
-                    res.render("secrets"); 
-                } 
-            } 
+                if (foundUser.password === password) {
+                    res.render("secrets");
+                }
+            }
         }
     })
 
