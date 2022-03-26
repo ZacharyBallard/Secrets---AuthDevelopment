@@ -46,6 +46,8 @@ const userSchema = new mongoose.Schema({
     email: String,
     password: String,
     googleId: String,
+    //added layer of schema in order to save secrets for the person logged in
+    secret: String
 });
 
 //use passport local mongoose to hash and salt passwords and save users into Mongo DB
@@ -78,7 +80,7 @@ passport.use(new GoogleStrategy({
         callbackURL: "http://localhost:3000/auth/google/secrets"
     },
     function (accessToken, refreshToken, profile, cb) {
-        console.log(profile);
+        // console.log(profile);
 
         User.findOrCreate({
             googleId: profile.id
@@ -121,13 +123,46 @@ app.get("/register", (req, res) => {
 })
 
 app.get("/secrets", (req, res) => {
+    //go through the DB and pull the secrets where the condition is not equal to null
+    User.find({"secret": {$ne:null}}, function(err, foundUsers){
+        if(err){
+            console.log(err)
+        } else {
+            if(foundUsers){
+                res.render("secrets", {usersWithSecrets:foundUsers})
+            }
+        }
+    })
+})
+
+app.get("/submit", (req, res) => {
     //check to see if authenticated 
     if (req.isAuthenticated()) {
-        res.render("secrets");
+        res.render("submit");
     } else {
         res.redirect("/login");
     }
 })
+
+app.post("/submit", (req, res) => {
+    const submittedSecret = req.body.secret;
+
+    console.log(req.user.id);
+
+    User.findById(req.user.id, (err, foundUser) => {
+        if(err){
+            console.log(err)
+        } else {
+            if(foundUser){
+                foundUser.secret = submittedSecret;
+                foundUser.save(function(){
+                    res.redirect("/secrets")
+                })
+            }
+        }
+    })
+})
+
 
 app.get("/logout", (req, res) => {
     //deauthenticate and end the session
